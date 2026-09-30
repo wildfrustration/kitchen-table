@@ -7,7 +7,11 @@ namespace PlanD.Data;
 
 public sealed record CountyMatch(string CountyCode, string CountyName, string State, decimal Share);
 
-public sealed record DrugSearchResult(string Rxcui, string Name, string TermType, bool OnAnyFormulary);
+public sealed record DrugSearchResult(
+    string Rxcui, string Name, string TermType, bool OnAnyFormulary, string? GenericRxcui, string? GenericName)
+{
+    public bool IsBrand => TermType is "SBD" or "BPCK";
+}
 
 /// <summary>Reads the active releases to answer quote, ZIP and drug-search queries.</summary>
 public sealed class QuoteRepository(NpgsqlDataSource db) : IQuoteData
@@ -32,24 +36,72 @@ public sealed class QuoteRepository(NpgsqlDataSource db) : IQuoteData
             """, new { geo, zip = zip.Trim().PadLeft(5, '0') })).ToList();
     }
 
+    /// <summary>
+    /// Typo-tolerant drug search: every word must match a word in the name approximately (trigram word
+    /// similarity) or as a substring, and every number must match a whole number ("5" finds "5 MG", not "25 MG").
+    /// Drugs on some PDP formulary come first; a brand result carries its generic equivalent.
+    /// </summary>
     public async Task<IReadOnlyList<DrugSearchResult>> SearchDrugsAsync(string text, int year, int limit = 25, CancellationToken ct = default)
     {
+        var tokens = text.ToLowerInvariant()
+            .Split([' ', ',', '/', '(', ')', '[', ']'], StringSplitOptions.RemoveEmptyEntries)
+            .Where(t => t is not ("mg" or "tab" or "tablet" or "oral"))
+            .Take(6)
+            .ToList();
+        if (tokens.Count == 0) return [];
+
         await using var conn = await db.OpenConnectionAsync(ct);
         var rx = await Releases.ActiveAsync(conn, ReleaseSource.RxNorm, null) ?? throw NoRelease("rxnorm");
         var spuf = await Releases.ActiveAsync(conn, ReleaseSource.Spuf, year);
-        var terms = text.Trim().ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var where = string.Join(" and ", terms.Select((_, i) => $"lower(c.name) like @t{i}"));
-        var args = new DynamicParameters(new { rx, spuf, limit });
-        for (var i = 0; i < terms.Length; i++) args.Add($"t{i}", $"%{terms[i]}%");
 
-        return (await conn.QueryAsync<DrugSearchResult>($"""
+        var args = new DynamicParameters(new { rx, spuf, limit });
+        var where = new List<string>();
+        var score = new List<string>();
+        for (var i = 0; i < tokens.Count; i++)
+        {
+            var t = tokens[i];
+            if (decimal.TryParse(t, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out _))
+            {
+                args.Add($"re{i}", $@"\m{System.Text.RegularExpressions.Regex.Escape(t)}\M");
+                where.Add($"lower(c.name) ~ @re{i}");
+            }
+            else
+            {
+                args.Add($"t{i}", t);
+                args.Add($"like{i}", $"%{t}%");
+                where.Add($"(lower(c.name) like @like{i} or @t{i} <% lower(c.name))");
+                score.Add($"word_similarity(@t{i}, lower(c.name))");
+            }
+        }
+
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        await conn.ExecuteAsync("set local pg_trgm.word_similarity_threshold = 0.45", transaction: tx);
+        var results = await conn.QueryAsync<DrugSearchResult>($"""
             select c.rxcui as Rxcui, c.name as Name, c.tty as TermType,
-                   exists (select 1 from cms.spuf_formulary f where f.release_id = @spuf and f.rxcui = c.rxcui) as OnAnyFormulary
+                   exists (select 1 from cms.spuf_formulary f where f.release_id = @spuf and f.rxcui = c.rxcui) as OnAnyFormulary,
+                   g.generic_rxcui as GenericRxcui, gc.name as GenericName
             from cms.rx_concept c
-            where c.release_id = @rx and c.tty in ('SCD', 'SBD', 'GPCK', 'BPCK') and {where}
-            order by OnAnyFormulary desc, length(c.name), c.name
+            left join lateral (
+                select generic_rxcui from cms.rx_generic where release_id = @rx and brand_rxcui = c.rxcui order by generic_rxcui limit 1
+            ) g on true
+            left join cms.rx_concept gc on gc.release_id = @rx and gc.rxcui = g.generic_rxcui
+            where c.release_id = @rx and c.tty in ('SCD', 'SBD', 'GPCK', 'BPCK') and {string.Join(" and ", where)}
+            order by OnAnyFormulary desc,
+                     {(score.Count > 0 ? string.Join(" + ", score) : "0")} desc,
+                     (c.tty in ('SCD', 'SBD')) desc,
+                     length(c.name), c.name
             limit @limit
-            """, args)).ToList();
+            """, args, tx);
+        await tx.CommitAsync(ct);
+        return results.ToList();
+    }
+
+    /// <summary>The newest plan year with active Part D data (2027 only once its files are loaded).</summary>
+    public async Task<int> LatestPlanYearAsync(CancellationToken ct = default)
+    {
+        await using var conn = await db.OpenConnectionAsync(ct);
+        return await conn.ExecuteScalarAsync<int?>(
+            "select max(plan_year) from cms.release where source = 'spuf' and status = 'active'") ?? throw NoRelease("spuf");
     }
 
     public async Task<IReadOnlyList<PlanOffer>> PlansForCountyAsync(int year, string countyCode, CancellationToken ct = default)
