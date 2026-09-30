@@ -18,6 +18,7 @@ public static class Cli
           ingest landscape <csv> --year <yyyy>                  CMS landscape CSV
           ingest geo <dir>                                      ZIP/ZCTA/county/SSA crosswalks (data/raw/geo)
           ingest rxnorm <dir>                                   RxNorm prescribable subset (the rrf folder)
+          ingest pharmacies <nppes.zip>                         NPPES monthly V2 zip (after geo and spuf)
 
         Quoting
           zip <zip>                                   Counties (SSA codes) a ZIP falls in
@@ -79,6 +80,12 @@ public static class Cli
                 case "ingest geo":
                 {
                     var id = await new GeoLoader(db, log).LoadAsync(a.Positional(0, "dir"));
+                    return await MaybeActivate(db, a, id, log);
+                }
+
+                case "ingest pharmacies":
+                {
+                    var id = await new PharmacyLoader(db, log).LoadAsync(a.Positional(0, "nppes.zip"));
                     return await MaybeActivate(db, a, id, log);
                 }
 

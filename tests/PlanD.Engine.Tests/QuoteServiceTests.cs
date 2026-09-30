@@ -77,6 +77,39 @@ public class QuoteServiceTests
         Assert.Contains(quote.Plans[0].Notes, n => n.Contains("not covered"));
     }
 
+    [Fact]
+    public async Task Named_pharmacy_is_priced_with_its_own_preferred_status_and_fees()
+    {
+        var plan = Offer("S0001");
+        var data = new FakeData().With(plan, Tiers(1, preferred: Copay(0m), standard: Copay(5m)), Covered(1, 20m), preferredPharmacies: 100);
+        var fee = new DispensingFees([2m, 2m, 2m], [2m, 2m, 2m], [null, null, null]);
+        data.Named[(plan.Key, "1111111111")] = new NetworkPharmacy(Retail: true, Mail: false, PreferredRetail: false, PreferredMail: false, fee);
+
+        var quote = await new QuoteService(data).QuoteAsync(Request() with { PharmacyNpis = ["1111111111", "2222222222"] });
+        var q = quote.Plans[0];
+
+        // The client's pharmacy is standard, not preferred: $5 copay, even though the plan has preferred pharmacies.
+        Assert.Equal(PharmacyType.StandardRetail, q.Drugs.Pharmacy);
+        Assert.Equal("1111111111", q.PricedAtNpi);
+        Assert.Equal(60m, q.Drugs.Total);
+        Assert.Equal(22m, q.Drugs.Drugs[0].FullCostPerFill);
+        Assert.True(q.PharmacyInNetwork);
+        Assert.Equal([true, false], q.Pharmacies.Select(p => p.InNetwork));
+    }
+
+    [Fact]
+    public async Task Plan_without_any_of_the_clients_pharmacies_is_flagged()
+    {
+        var plan = Offer("S0001");
+        var data = new FakeData().With(plan, Tiers(1, Copay(1m)), Covered(1, 20m));
+
+        var quote = await new QuoteService(data).QuoteAsync(Request() with { PharmacyNpis = ["3333333333"] });
+
+        Assert.False(quote.Plans[0].PharmacyInNetwork);
+        Assert.Null(quote.Plans[0].PricedAtNpi);
+        Assert.Contains(quote.Plans[0].Notes, n => n.Contains("None of the client's pharmacies"));
+    }
+
     // --- helpers -------------------------------------------------------------------------------
 
     private const string Rxcui = "123";
@@ -139,7 +172,10 @@ public class QuoteServiceTests
         public Task<IReadOnlyList<DrugInfo>> DrugInfoAsync(IReadOnlyCollection<string> rxcuis, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<DrugInfo>>(rxcuis.Select(r => new DrugInfo(r, "test drug 10 MG Oral Tablet", "SCD")).ToList());
 
-        public Task<PlanDrugData> PlanDrugDataAsync(int year, IReadOnlyList<PlanOffer> plans, IReadOnlyCollection<string> rxcuis, CancellationToken ct = default) =>
-            Task.FromResult(new PlanDrugData(_benefits, _drugs, _market, _networks));
+        public Dictionary<(PlanKey, string), NetworkPharmacy> Named { get; } = [];
+
+        public Task<PlanDrugData> PlanDrugDataAsync(int year, IReadOnlyList<PlanOffer> plans, IReadOnlyCollection<string> rxcuis,
+            IReadOnlyCollection<string> pharmacyNpis, CancellationToken ct = default) =>
+            Task.FromResult(new PlanDrugData(_benefits, _drugs, _market, _networks) { NamedPharmacies = Named });
     }
 }

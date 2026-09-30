@@ -17,7 +17,8 @@ public sealed record PlanOffer(
     decimal? Premium,
     decimal? LisPremium,
     string? StarRating,
-    bool? LisBenchmark)
+    bool? LisBenchmark,
+    string? ParentOrganization = null)
 {
     /// <summary>Monthly premium, or what's left of it after Extra Help's premium subsidy.</summary>
     public decimal MonthlyPremium(ExtraHelpLevel extraHelp)
@@ -56,7 +57,13 @@ public sealed record QuoteRequest
     public ExtraHelpLevel ExtraHelp { get; init; } = ExtraHelpLevel.None;
     public int StartMonth { get; init; } = 1;
     public bool DeemedDeductibleRule { get; init; } = true;
+
+    /// <summary>The client's pharmacies (NPIs, up to 5). Empty = price at each plan's typical pharmacy.</summary>
+    public IReadOnlyList<string> PharmacyNpis { get; init; } = [];
 }
+
+/// <summary>A chosen pharmacy's standing in one plan's network.</summary>
+public sealed record PharmacyStatus(string Npi, bool InNetwork, bool Preferred);
 
 public sealed record PlanQuote(
     PlanOffer Plan,
@@ -64,19 +71,34 @@ public sealed record PlanQuote(
     decimal MonthlyPremium,
     decimal AnnualPremium,
     decimal EstimatedAnnualCost,
-    IReadOnlyList<string> Notes);
+    IReadOnlyList<string> Notes,
+    bool AllDrugsCovered,
+    string? PricedAtNpi,
+    IReadOnlyList<PharmacyStatus> Pharmacies)
+{
+    /// <summary>Null when the client named no pharmacy; otherwise whether any of them is in this plan's network.</summary>
+    public bool? PharmacyInNetwork => Pharmacies.Count == 0 ? null : Pharmacies.Any(p => p.InNetwork);
+}
 
 public sealed record Quote(QuoteRequest Request, IReadOnlyList<DrugInfo> Drugs, IReadOnlyList<PlanQuote> Plans);
 
 /// <summary>Per-plan network facts for one pharmacy type.</summary>
 public sealed record NetworkInfo(int PharmacyCount, int InAreaCount, DispensingFees Fees);
 
+/// <summary>One named pharmacy in one plan's network.</summary>
+public sealed record NetworkPharmacy(bool Retail, bool Mail, bool PreferredRetail, bool PreferredMail, DispensingFees Fees);
+
 /// <summary>Everything the simulator needs for a set of plans and drugs.</summary>
 public sealed record PlanDrugData(
     IReadOnlyDictionary<PlanKey, PlanBenefit> Benefits,
     IReadOnlyDictionary<(PlanKey Plan, string Rxcui), PlanDrug> Drugs,
     IReadOnlyDictionary<string, IReadOnlyDictionary<int, decimal>> MarketUnitCost,
-    IReadOnlyDictionary<(PlanKey Plan, PharmacyType Type), NetworkInfo> Networks);
+    IReadOnlyDictionary<(PlanKey Plan, PharmacyType Type), NetworkInfo> Networks)
+{
+    /// <summary>The client's named pharmacies in each plan's network; a missing pair means out of network.</summary>
+    public IReadOnlyDictionary<(PlanKey Plan, string Npi), NetworkPharmacy> NamedPharmacies { get; init; } =
+        new Dictionary<(PlanKey, string), NetworkPharmacy>();
+}
 
 public interface IQuoteData
 {
@@ -85,5 +107,6 @@ public interface IQuoteData
 
     Task<IReadOnlyList<DrugInfo>> DrugInfoAsync(IReadOnlyCollection<string> rxcuis, CancellationToken ct = default);
 
-    Task<PlanDrugData> PlanDrugDataAsync(int year, IReadOnlyList<PlanOffer> plans, IReadOnlyCollection<string> rxcuis, CancellationToken ct = default);
+    Task<PlanDrugData> PlanDrugDataAsync(int year, IReadOnlyList<PlanOffer> plans, IReadOnlyCollection<string> rxcuis,
+        IReadOnlyCollection<string> pharmacyNpis, CancellationToken ct = default);
 }

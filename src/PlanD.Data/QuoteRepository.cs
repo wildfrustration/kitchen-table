@@ -7,6 +7,10 @@ namespace PlanD.Data;
 
 public sealed record CountyMatch(string CountyCode, string CountyName, string State, decimal Share);
 
+public sealed record PharmacySearchResult(
+    string Npi, string Name, string? Address1, string? Address2, string? City, string? State, string? Zip,
+    string? Phone, bool MailOrder, bool InNetwork, double? Miles);
+
 public sealed record DrugSearchResult(
     string Rxcui, string Name, string TermType, bool OnAnyFormulary, string? GenericRxcui, string? GenericName)
 {
@@ -96,6 +100,24 @@ public sealed class QuoteRepository(NpgsqlDataSource db) : IQuoteData
         return results.ToList();
     }
 
+    public async Task<int?> ActiveReleaseIdAsync(string source, int? planYear, CancellationToken ct = default)
+    {
+        await using var conn = await db.OpenConnectionAsync(ct);
+        return await Releases.ActiveAsync(conn, source, planYear);
+    }
+
+    /// <summary>PDP sponsors (landscape parent organizations) and how many PDPs each offers nationally.</summary>
+    public async Task<IReadOnlyList<(string ParentOrganization, int Plans)>> PdpSponsorsAsync(int year, CancellationToken ct = default)
+    {
+        await using var conn = await db.OpenConnectionAsync(ct);
+        var land = await Releases.ActiveAsync(conn, ReleaseSource.Landscape, year) ?? throw NoRelease($"landscape {year}");
+        return (await conn.QueryAsync<(string, int)>("""
+            select parent_organization, count(*)::int from cms.landscape_plan
+            where release_id = @land and parent_organization is not null
+            group by parent_organization order by count(*) desc, parent_organization
+            """, new { land })).ToList();
+    }
+
     /// <summary>The newest plan year with active Part D data (2027 only once its files are loaded).</summary>
     public async Task<int> LatestPlanYearAsync(CancellationToken ct = default)
     {
@@ -113,7 +135,8 @@ public sealed class QuoteRepository(NpgsqlDataSource db) : IQuoteData
         // PDPs are sold by PDP region; employer-only plans (plan id 800+) aren't open to individuals.
         var rows = await conn.QueryAsync("""
             select p.contract_id, p.plan_id, p.segment_id, p.plan_name, p.formulary_id, p.deductible, p.premium as spuf_premium,
-                   l.organization_name, l.drug_benefit_type, l.part_d_total_premium, l.part_d_lis_premium, l.star_part_d, l.lis_benchmark
+                   l.organization_name, l.parent_organization, l.drug_benefit_type, l.part_d_total_premium, l.part_d_lis_premium,
+                   l.star_part_d, l.lis_benchmark
             from cms.spuf_plan p
             join cms.spuf_geo g on g.release_id = p.release_id and g.county_code = @countyCode and g.pdp_region_code = p.pdp_region_code
             left join cms.landscape_plan l
@@ -131,7 +154,8 @@ public sealed class QuoteRepository(NpgsqlDataSource db) : IQuoteData
             (decimal?)r.part_d_total_premium ?? (decimal?)r.spuf_premium,
             (decimal?)r.part_d_lis_premium,
             (string?)r.star_part_d,
-            (bool?)r.lis_benchmark)).ToList();
+            (bool?)r.lis_benchmark,
+            (string?)r.parent_organization)).ToList();
     }
 
     public async Task<IReadOnlyList<DrugInfo>> DrugInfoAsync(IReadOnlyCollection<string> rxcuis, CancellationToken ct = default)
@@ -144,7 +168,63 @@ public sealed class QuoteRepository(NpgsqlDataSource db) : IQuoteData
         return rxcuis.Select(id => found.GetValueOrDefault(id) ?? new DrugInfo(id, $"RXCUI {id}", null)).ToList();
     }
 
-    public async Task<PlanDrugData> PlanDrugDataAsync(int year, IReadOnlyList<PlanOffer> plans, IReadOnlyCollection<string> rxcuis, CancellationToken ct = default)
+    /// <summary>
+    /// Pharmacies near a ZIP (ZIP-centroid distance), optionally matching a typo-tolerant name/address search.
+    /// Pharmacies in some active PDP network come first; the rest are shown so a patient can still find theirs.
+    /// </summary>
+    public async Task<IReadOnlyList<PharmacySearchResult>> SearchPharmaciesAsync(
+        string zip, string? text, double radiusMiles, int limit = 20, CancellationToken ct = default)
+    {
+        await using var conn = await db.OpenConnectionAsync(ct);
+        var geo = await Releases.ActiveAsync(conn, ReleaseSource.Geo, null) ?? throw NoRelease("geo");
+        var nppes = await Releases.ActiveAsync(conn, ReleaseSource.Nppes, null) ?? throw NoRelease("nppes");
+        var origin = await conn.QuerySingleOrDefaultAsync<(double Lat, double Lon)?>("""
+            select c.lat, c.lon from cms.zcta_centroid c
+            where c.release_id = @geo
+              and c.zcta = coalesce((select zcta from cms.zip_zcta where release_id = @geo and zip = @zip), @zip)
+            """, new { geo, zip });
+        if (origin is not { } o) return [];
+
+        var args = new DynamicParameters(new
+        {
+            nppes, lat = o.Lat, lon = o.Lon, radius = radiusMiles, limit,
+            dLat = radiusMiles / 69.0, dLon = radiusMiles / (69.0 * Math.Cos(o.Lat * Math.PI / 180)),
+        });
+        var where = new List<string>();
+        var tokens = (text ?? "").ToLowerInvariant().Split([' ', ',', '#'], StringSplitOptions.RemoveEmptyEntries).Take(6).ToList();
+        for (var i = 0; i < tokens.Count; i++)
+        {
+            args.Add($"t{i}", tokens[i]);
+            args.Add($"like{i}", $"%{tokens[i]}%");
+            where.Add($"(p.search_text like @like{i} or @t{i} <% p.search_text)");
+        }
+
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        await conn.ExecuteAsync("set local pg_trgm.word_similarity_threshold = 0.5", transaction: tx);
+        var rows = await conn.QueryAsync<PharmacySearchResult>($"""
+            select * from (
+                select p.npi as Npi, p.display_name as Name, p.address1 as Address1, p.address2 as Address2, p.city as City,
+                       p.state as State, p.zip5 as Zip, p.phone as Phone, p.mail_order as MailOrder,
+                       exists (select 1 from cms.spuf_network_pharmacy n
+                               join cms.release r on r.id = n.release_id and r.source = 'spuf' and r.status = 'active'
+                               where n.npi = p.npi) as InNetwork,
+                       3958.8 * 2 * asin(sqrt(power(sin(radians(p.lat - @lat) / 2), 2)
+                           + cos(radians(@lat)) * cos(radians(p.lat)) * power(sin(radians(p.lon - @lon) / 2), 2))) as Miles
+                from cms.pharmacy p
+                where p.release_id = @nppes
+                  and p.lat between @lat - @dLat and @lat + @dLat and p.lon between @lon - @dLon and @lon + @dLon
+                  {(where.Count > 0 ? "and " + string.Join(" and ", where) : "")}
+            ) x
+            where x.Miles <= @radius
+            order by x.InNetwork desc, x.Miles, x.Name
+            limit @limit
+            """, args, tx);
+        await tx.CommitAsync(ct);
+        return rows.ToList();
+    }
+
+    public async Task<PlanDrugData> PlanDrugDataAsync(int year, IReadOnlyList<PlanOffer> plans, IReadOnlyCollection<string> rxcuis,
+        IReadOnlyCollection<string> pharmacyNpis, CancellationToken ct = default)
     {
         await using var conn = await db.OpenConnectionAsync(ct);
         var spuf = await Releases.ActiveAsync(conn, ReleaseSource.Spuf, year) ?? throw NoRelease($"spuf {year}");
@@ -185,6 +265,14 @@ public sealed class QuoteRepository(NpgsqlDataSource db) : IQuoteData
             """, new { keys.spuf, keys.c, keys.p, keys.s, ndcs });
         var market = await conn.QueryAsync(
             "select rxcui, days_supply, unit_cost from cms.spuf_drug_price where release_id = @spuf and rxcui = any(@rxcuis)", keys);
+        var named = pharmacyNpis.Count == 0 ? Enumerable.Empty<dynamic>() : await conn.QueryAsync($"""
+            select k.contract_id, k.plan_id, k.segment_id, np.npi, np.flags, fs.*
+            from {planKeys}
+            join cms.spuf_plan_network pn on pn.release_id = @spuf
+                 and pn.contract_id = k.contract_id and pn.plan_id = k.plan_id and pn.segment_id = k.segment_id
+            join cms.spuf_network_pharmacy np on np.release_id = @spuf and np.network_id = pn.network_id and np.npi = any(@npis)
+            join cms.spuf_fee_schedule fs on fs.release_id = @spuf and fs.fee_schedule_id = np.fee_schedule_id
+            """, new { keys.spuf, keys.c, keys.p, keys.s, npis = pharmacyNpis.ToArray() });
         var networks = await conn.QueryAsync($"""
             select n.* from {planKeys}
             join cms.spuf_network_summary n on n.release_id = @spuf
@@ -243,7 +331,17 @@ public sealed class QuoteRepository(NpgsqlDataSource db) : IQuoteData
                 [(decimal?)n.selected_fee_30, (decimal?)n.selected_fee_60, (decimal?)n.selected_fee_90],
                 (decimal?)n.floor_price ?? 0m)));
 
-        return new PlanDrugData(benefits, drugs, marketCosts, networkInfo);
+        var namedPharmacies = named.ToDictionary(
+            n => (Key((object)n), (string)n.npi),
+            n => (NetworkPharmacy)new NetworkPharmacy(
+                ((short)n.flags & 1) != 0, ((short)n.flags & 2) != 0, ((short)n.flags & 4) != 0, ((short)n.flags & 8) != 0,
+                new DispensingFees(
+                    [Fee(n.brand_fee_30), Fee(n.brand_fee_60), Fee(n.brand_fee_90)],
+                    [Fee(n.generic_fee_30), Fee(n.generic_fee_60), Fee(n.generic_fee_90)],
+                    [(decimal?)n.selected_fee_30, (decimal?)n.selected_fee_60, (decimal?)n.selected_fee_90],
+                    (decimal?)n.floor_price ?? 0m)));
+
+        return new PlanDrugData(benefits, drugs, marketCosts, networkInfo) { NamedPharmacies = namedPharmacies };
     }
 
     private static PlanKey Key(object row)

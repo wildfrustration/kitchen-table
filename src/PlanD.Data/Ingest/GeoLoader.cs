@@ -14,10 +14,11 @@ public sealed class GeoLoader(NpgsqlDataSource db, Action<string> log)
     private const string GeocorrCtFile = "geocorr2022_zcta_to_ctcounty_pre2023_pop20.csv";
     private const string NberFile = "ssa_fips_state_county_2026.csv";
     private const string GpciFile = "ffs_2024/CSV/Geographic indices 2020-2026 - Physician GPCI.csv";
+    private const string GazetteerFile = "2026_Gaz_zcta_national.txt";
 
     public async Task<int> LoadAsync(string directory, CancellationToken ct = default)
     {
-        var releaseId = await Releases.CreateAsync(db, ReleaseSource.Geo, null, "geocorr2022+uds2022+nber2026", directory);
+        var releaseId = await Releases.CreateAsync(db, ReleaseSource.Geo, null, "geocorr2022+uds2022+nber2026+gaz2026", directory);
         log($"Release {releaseId}: geography from {directory}");
         try
         {
@@ -26,6 +27,7 @@ public sealed class GeoLoader(NpgsqlDataSource db, Action<string> log)
                 ["zip_zcta"] = await LoadZipZcta(releaseId, Path.Combine(directory, UdsFile)),
                 ["zcta_county"] = await LoadZctaCounty(releaseId, Path.Combine(directory, GeocorrFile), Path.Combine(directory, GeocorrCtFile)),
                 ["fips_ssa"] = await LoadFipsSsa(releaseId, Path.Combine(directory, NberFile), Path.Combine(directory, GpciFile)),
+                ["zcta_centroid"] = await LoadCentroids(releaseId, Path.Combine(directory, GazetteerFile)),
             };
             await Releases.MarkReadyAsync(db, releaseId, counts);
             log($"Release {releaseId} ready: {string.Join(", ", counts.Select(c => $"{c.Key}={c.Value:N0}"))}");
@@ -132,6 +134,28 @@ public sealed class GeoLoader(NpgsqlDataSource db, Action<string> log)
                 w.WriteText(f); w.WriteText(s); w.WriteText(v.State); w.WriteText(v.Name);
             }
             return rows.Count;
+        });
+    }
+
+    /// <summary>Census Gazetteer ZCTA internal points. Recent years are pipe-delimited, older ones tab-delimited.</summary>
+    private async Task<long> LoadCentroids(int releaseId, string path)
+    {
+        var delimiter = File.ReadLines(path).First().Contains('|') ? '|' : '\t';
+        using var r = new DelimitedReader(path, delimiter);
+        int zcta = r.Column("GEOID"), lat = r.Column("INTPTLAT"), lon = r.Column("INTPTLONG");
+        return await Copy("cms.zcta_centroid (release_id, zcta, lat, lon)", w =>
+        {
+            long n = 0;
+            while (r.Read())
+            {
+                w.StartRow();
+                w.Write(releaseId, NpgsqlDbType.Integer);
+                w.WriteText(r.Required(zcta));
+                w.Write((double)r.Decimal(lat)!.Value, NpgsqlDbType.Double);
+                w.Write((double)r.Decimal(lon)!.Value, NpgsqlDbType.Double);
+                n++;
+            }
+            return n;
         });
     }
 

@@ -18,6 +18,16 @@ services.AddDbContext<AppDbContext>(o => o.UseNpgsql(Db.ConnectionString,
 services.AddSingleton<QuoteRepository>();
 services.AddSingleton<IQuoteData>(sp => sp.GetRequiredService<QuoteRepository>());
 services.AddSingleton<QuoteService>();
+services.AddSingleton<ClientQuotes>();
+
+// --- email: logged in development, Resend in production ------------------------------------------
+var emailOptions = builder.Configuration.GetSection("Email").Get<EmailOptions>() ?? new EmailOptions();
+services.AddSingleton(emailOptions);
+if (emailOptions.Provider.Equals("resend", StringComparison.OrdinalIgnoreCase))
+    services.AddHttpClient<IEmailSender, ResendEmailSender>();
+else
+    services.AddSingleton<IEmailSender, LogEmailSender>();
+services.AddSingleton<Notifications>();
 
 // --- auth: brokers sign in with Identity; patients get a separate, narrower cookie ---------------
 services.AddAuthentication(IdentityConstants.ApplicationScheme)
@@ -70,6 +80,8 @@ app.MapOpenApi();
 var api = app.MapGroup("/api");
 api.MapAuthEndpoints();
 api.MapReferenceEndpoints();
+api.MapIntakeEndpoints();
+api.MapClientEndpoints();
 app.MapFallbackToFile("index.html");
 
 app.Run();

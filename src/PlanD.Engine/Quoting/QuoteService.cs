@@ -13,7 +13,7 @@ public sealed class QuoteService(IQuoteData data)
 
         var rxcuis = request.Drugs.Select(d => d.Rxcui).Distinct().ToList();
         var infos = (await data.DrugInfoAsync(rxcuis, ct)).ToDictionary(i => i.Rxcui);
-        var drugData = await data.PlanDrugDataAsync(request.Year, plans, rxcuis, ct);
+        var drugData = await data.PlanDrugDataAsync(request.Year, plans, rxcuis, request.PharmacyNpis, ct);
 
         var prescriptions = request.Drugs.Select(d => ToPrescription(d, infos.GetValueOrDefault(d.Rxcui), request.Pharmacy)).ToList();
         var options = new SimulationOptions
@@ -36,13 +36,22 @@ public sealed class QuoteService(IQuoteData data)
                 .ToList();
 
             var notes = new List<string>();
-            var best = PharmacyCandidates(benefit, plan.Key, drugData, request.Pharmacy, notes)
-                .Select(type => DrugCostSimulator.Simulate(benefit, drugs, Fees(drugData, plan.Key, type), type, options))
-                .MinBy(e => e.Total)!;
+            var statuses = request.PharmacyNpis
+                .Select(npi => drugData.NamedPharmacies.TryGetValue((plan.Key, npi), out var p)
+                    ? new PharmacyStatus(npi, InNetwork: true, Preferred: p.PreferredRetail || p.PreferredMail)
+                    : new PharmacyStatus(npi, InNetwork: false, Preferred: false))
+                .ToList();
+
+            // Like Plan Finder's plan card: the lowest cost among the pharmacies the person could use.
+            var (best, pricedAt) = Candidates(benefit, plan.Key, drugData, request, notes)
+                .Select(c => (Estimate: DrugCostSimulator.Simulate(benefit, drugs, c.Fees, c.Type, options), c.Npi))
+                .MinBy(x => x.Estimate.Total);
 
             var monthly = plan.MonthlyPremium(request.ExtraHelp);
             var annualPremium = monthly * months;
-            quotes.Add(new PlanQuote(plan, best, monthly, annualPremium, annualPremium + best.Total, Explain(plan, best, notes)));
+            var allCovered = best.Drugs.All(d => d.Status is CoverageStatus.Covered or CoverageStatus.CoveredSupplemental);
+            quotes.Add(new PlanQuote(plan, best, monthly, annualPremium, annualPremium + best.Total,
+                Explain(plan, best, pricedAt, notes), allCovered, pricedAt, statuses));
         }
 
         var ranked = quotes
@@ -65,7 +74,35 @@ public sealed class QuoteService(IQuoteData data)
             info?.Kind ?? DrugKind.Generic, info?.IsInsulin ?? false, info?.IsVaccine ?? false);
     }
 
-    private static IEnumerable<PharmacyType> PharmacyCandidates(
+    private sealed record Candidate(PharmacyType Type, DispensingFees Fees, string? Npi);
+
+    /// <summary>
+    /// The client's in-network retail pharmacies when they named some, priced with each one's own status and fees;
+    /// otherwise (or when none is in network) the plan's typical preferred/standard pharmacy.
+    /// </summary>
+    private static IEnumerable<Candidate> Candidates(PlanBenefit benefit, PlanKey key, PlanDrugData data, QuoteRequest request, List<string> notes)
+    {
+        if (request.Pharmacy == PharmacyPreference.Retail && request.PharmacyNpis.Count > 0)
+        {
+            var named = request.PharmacyNpis
+                .Where(npi => data.NamedPharmacies.TryGetValue((key, npi), out var p) && p.Retail)
+                .Select(npi =>
+                {
+                    var p = data.NamedPharmacies[(key, npi)];
+                    var type = p.PreferredRetail && benefit.Offers(PharmacyType.PreferredRetail)
+                        ? PharmacyType.PreferredRetail
+                        : PharmacyType.StandardRetail;
+                    return new Candidate(type, p.Fees, npi);
+                })
+                .ToList();
+            if (named.Count > 0) return named;
+            notes.Add("None of the client's pharmacies are in this plan's network; priced at a typical in-network pharmacy");
+        }
+
+        return PharmacyTypes(benefit, key, data, request.Pharmacy, notes).Select(t => new Candidate(t, Fees(data, key, t), null));
+    }
+
+    private static IEnumerable<PharmacyType> PharmacyTypes(
         PlanBenefit benefit, PlanKey key, PlanDrugData data, PharmacyPreference preference, List<string> notes)
     {
         bool Usable(PharmacyType t, bool needsNetwork) =>
@@ -88,7 +125,7 @@ public sealed class QuoteService(IQuoteData data)
     private static DispensingFees Fees(PlanDrugData data, PlanKey key, PharmacyType type) =>
         data.Networks.TryGetValue((key, type), out var n) ? n.Fees : DispensingFees.None;
 
-    private static List<string> Explain(PlanOffer plan, DrugCostEstimate estimate, List<string> notes)
+    private static List<string> Explain(PlanOffer plan, DrugCostEstimate estimate, string? pricedAtNpi, List<string> notes)
     {
         foreach (var d in estimate.Drugs)
         {
@@ -113,10 +150,11 @@ public sealed class QuoteService(IQuoteData data)
             if (d.PriceEstimated && d.Status is CoverageStatus.Covered) notes.Add($"{d.Name}: price estimated");
         }
 
+        var where = pricedAtNpi is null ? "a" : "the client's";
         notes.Add(estimate.Pharmacy switch
         {
-            PharmacyType.PreferredRetail => "Priced at a preferred retail pharmacy",
-            PharmacyType.StandardRetail => "Priced at a standard retail pharmacy",
+            PharmacyType.PreferredRetail => $"Priced at {where} preferred retail pharmacy",
+            PharmacyType.StandardRetail => $"Priced at {where} standard retail pharmacy",
             PharmacyType.PreferredMail => "Priced at preferred mail order",
             _ => "Priced at standard mail order",
         });

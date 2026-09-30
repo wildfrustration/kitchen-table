@@ -42,7 +42,11 @@ public sealed partial class SpufLoader(NpgsqlDataSource db, Action<string> log)
                 : Timed("pricing", () => LoadPricing(releaseId, files.Pricing));
             var networks = Timed("pharmacy networks", () => new NetworkSummarizer(db, log).LoadAsync(releaseId, files.Pharmacy, ct));
             counts["spuf_pricing"] = await pricing;
-            counts["spuf_network_summary"] = await networks;
+            var network = await networks;
+            counts["spuf_network_summary"] = network.Summaries;
+            counts["spuf_plan_network"] = network.Networks;
+            counts["spuf_network_pharmacy"] = network.NetworkRows;
+            counts["spuf_fee_schedule"] = network.FeeSchedules;
 
             if (files.Pricing is not null)
                 counts["spuf_drug_price"] = await Timed("drug price averages", () => BuildDrugPrices(releaseId));
@@ -362,7 +366,8 @@ public sealed partial class SpufLoader(NpgsqlDataSource db, Action<string> log)
     {
         await using var conn = await db.OpenConnectionAsync();
         foreach (var table in new[] { "spuf_plan", "spuf_geo", "spuf_formulary", "spuf_excluded_drug",
-                     "spuf_beneficiary_cost", "spuf_insulin_cost", "spuf_pricing", "spuf_drug_price", "spuf_network_summary" })
+                     "spuf_beneficiary_cost", "spuf_insulin_cost", "spuf_pricing", "spuf_drug_price", "spuf_network_summary",
+                     "spuf_plan_network", "spuf_network_pharmacy", "spuf_fee_schedule" })
             await conn.ExecuteAsync($"analyze cms.{table}");
     }
 

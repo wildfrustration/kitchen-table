@@ -10,6 +10,7 @@ public static class ReleaseSource
     public const string Landscape = "landscape";
     public const string Geo = "geo";
     public const string RxNorm = "rxnorm";
+    public const string Nppes = "nppes";
 }
 
 public sealed record Release(int Id, string Source, int? PlanYear, string Label, string Status);
