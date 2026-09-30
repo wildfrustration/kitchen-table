@@ -14,3 +14,25 @@ jobs:
           global-json-file: global.json
       - run: dotnet build --configuration Release
       - run: dotnet test --configuration Release --no-build
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      # Building the API regenerates web/src/api/PlanD.Api.json from the endpoints.
+      - run: dotnet build src/PlanD.Api
+      - name: Types match the API, then build
+        working-directory: web
+        run: |
+          npm ci
+          npm run gen:api
+          git diff --exit-code src/api
+          npm run build

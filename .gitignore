@@ -8,3 +8,6 @@ TestResults/
 # CMS downloads and extracted files (tens of GB) — fetched by the ingest CLI
 data/raw/
 data/work/
+
+# Web build output (npm run build in web/)
+src/PlanD.Api/wwwroot/

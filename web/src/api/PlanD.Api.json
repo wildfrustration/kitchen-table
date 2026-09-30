@@ -1,0 +1,2160 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "PlanD.Api | v1",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reference/zip/{zip}": {
+      "get": {
+        "tags": [
+          "Reference"
+        ],
+        "parameters": [
+          {
+            "name": "zip",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CountyMatch"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reference/drugs": {
+      "get": {
+        "tags": [
+          "Reference"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DrugSearchResult"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reference/pharmacies": {
+      "get": {
+        "tags": [
+          "Reference"
+        ],
+        "parameters": [
+          {
+            "name": "zip",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "radius",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PharmacySearchResult"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/intake/{slug}": {
+      "get": {
+        "tags": [
+          "Intake"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBroker"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Intake"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicIntake"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/intake/{slug}/consents": {
+      "get": {
+        "tags": [
+          "Intake"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentTexts"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/intake/{slug}/disclaimer": {
+      "get": {
+        "tags": [
+          "Intake"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "zip",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Disclaimer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/intake/{slug}/link": {
+      "post": {
+        "tags": [
+          "Intake"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/patient/redeem": {
+      "post": {
+        "tags": [
+          "Patient"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedeemRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBroker"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/patient/intake": {
+      "get": {
+        "tags": [
+          "Patient"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientIntakeView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Patient"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicIntake"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/patient/consents": {
+      "get": {
+        "tags": [
+          "Patient"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentTexts"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/patient/logout": {
+      "post": {
+        "tags": [
+          "Patient"
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/clients": {
+      "get": {
+        "tags": [
+          "Clients"
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ClientStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClientSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrokerClientForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clients/{id}": {
+      "get": {
+        "tags": [
+          "Clients"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Clients"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrokerClientForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clients/{id}/status": {
+      "put": {
+        "tags": [
+          "Clients"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/clients/{id}/notes": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewNote"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clients/{id}/invite": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteLink"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/clients/{id}/quote": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/clients/{id}/snapshots": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotCreated"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/snapshots/{id}": {
+      "get": {
+        "tags": [
+          "Clients"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/carriers": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CarrierChoice"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CarrierSelection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AgencyInfo": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "BrokerClientForm": {
+        "required": [
+          "form",
+          "extraHelpLevel"
+        ],
+        "type": "object",
+        "properties": {
+          "form": {
+            "$ref": "#/components/schemas/IntakeForm"
+          },
+          "extraHelpLevel": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "BrokerRole": {
+        "enum": [
+          "Broker",
+          "AgencyAdmin"
+        ]
+      },
+      "CarrierChoice": {
+        "required": [
+          "parentOrganization",
+          "plans",
+          "appointed"
+        ],
+        "type": "object",
+        "properties": {
+          "parentOrganization": {
+            "type": "string"
+          },
+          "plans": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "appointed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CarrierSelection": {
+        "required": [
+          "parentOrganizations"
+        ],
+        "type": "object",
+        "properties": {
+          "parentOrganizations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ClientDetail": {
+        "required": [
+          "id",
+          "status",
+          "source",
+          "form",
+          "extraHelpLevel",
+          "createdAt",
+          "submittedAt",
+          "brokerId",
+          "brokerName",
+          "notes",
+          "consents"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ClientStatus"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ClientSource"
+          },
+          "form": {
+            "$ref": "#/components/schemas/IntakeForm"
+          },
+          "extraHelpLevel": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "submittedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "brokerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "brokerName": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NoteView"
+            }
+          },
+          "consents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConsentView"
+            }
+          }
+        }
+      },
+      "ClientSource": {
+        "enum": [
+          "PublicLink",
+          "Invite",
+          "Broker"
+        ]
+      },
+      "ClientStatus": {
+        "enum": [
+          "New",
+          "Reviewed",
+          "Contacted",
+          "Enrolled",
+          "Closed"
+        ]
+      },
+      "ClientSummary": {
+        "required": [
+          "id",
+          "name",
+          "zip",
+          "status",
+          "source",
+          "isNew",
+          "submittedAt",
+          "drugCount",
+          "brokerId",
+          "brokerName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "zip": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/ClientStatus"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ClientSource"
+          },
+          "isNew": {
+            "type": "boolean"
+          },
+          "submittedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "drugCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "brokerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "brokerName": {
+            "type": "string"
+          }
+        }
+      },
+      "ConsentKind": {
+        "enum": [
+          "Contact",
+          "ShareHealthInfo"
+        ]
+      },
+      "ConsentTexts": {
+        "required": [
+          "version",
+          "contact",
+          "shareHealthInfo"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "contact": {
+            "type": "string"
+          },
+          "shareHealthInfo": {
+            "type": "string"
+          }
+        }
+      },
+      "ConsentView": {
+        "required": [
+          "kind",
+          "textVersion",
+          "grantedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ConsentKind"
+          },
+          "textVersion": {
+            "type": "string"
+          },
+          "grantedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CountyMatch": {
+        "required": [
+          "countyCode",
+          "countyName",
+          "state",
+          "share"
+        ],
+        "type": "object",
+        "properties": {
+          "countyCode": {
+            "type": "string"
+          },
+          "countyName": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "share": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "CoverageStatus": {
+        "enum": [
+          "Covered",
+          "CoveredSupplemental",
+          "NotOnFormulary",
+          "DaysSupplyNotCovered"
+        ]
+      },
+      "Disclaimer": {
+        "required": [
+          "organizations",
+          "plans",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "organizations": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "plans": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "DrugEntry": {
+        "required": [
+          "rxcui",
+          "name",
+          "unitsPerDose",
+          "dosesPerDay",
+          "daysSupply"
+        ],
+        "type": "object",
+        "properties": {
+          "rxcui": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "unitsPerDose": {
+            "type": "number",
+            "format": "double"
+          },
+          "dosesPerDay": {
+            "type": "number",
+            "format": "double"
+          },
+          "daysSupply": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "DrugSearchResult": {
+        "required": [
+          "rxcui",
+          "name",
+          "termType",
+          "onAnyFormulary",
+          "genericRxcui",
+          "genericName"
+        ],
+        "type": "object",
+        "properties": {
+          "rxcui": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "termType": {
+            "type": "string"
+          },
+          "onAnyFormulary": {
+            "type": "boolean"
+          },
+          "genericRxcui": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "genericName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isBrand": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ExtraHelpAnswer": {
+        "enum": [
+          "No",
+          "ExtraHelp",
+          "Medicaid",
+          "Ssi",
+          "MedicareSavingsProgram",
+          "NotSure"
+        ]
+      },
+      "HttpValidationProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "IntakeForm": {
+        "required": [
+          "firstName",
+          "lastName",
+          "email",
+          "phone",
+          "zip",
+          "countyCode",
+          "birthMonth",
+          "birthYear",
+          "medicareStatus",
+          "currentPlan",
+          "extraHelp",
+          "usesMailOrder",
+          "drugs",
+          "pharmacies"
+        ],
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "zip": {
+            "type": "string"
+          },
+          "countyCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "birthMonth": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "birthYear": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "medicareStatus": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MedicareStatus"
+              }
+            ]
+          },
+          "currentPlan": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "extraHelp": {
+            "$ref": "#/components/schemas/ExtraHelpAnswer"
+          },
+          "usesMailOrder": {
+            "type": "boolean"
+          },
+          "drugs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DrugEntry"
+            }
+          },
+          "pharmacies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PharmacyEntry"
+            }
+          }
+        }
+      },
+      "InviteLink": {
+        "required": [
+          "url",
+          "expiresAt",
+          "emailed"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "emailed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LinkRequest": {
+        "required": [
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "LoginRequest": {
+        "required": [
+          "email",
+          "password",
+          "rememberMe"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "rememberMe": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Me": {
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "role",
+          "publicSlug",
+          "agency"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/BrokerRole"
+          },
+          "publicSlug": {
+            "type": "string"
+          },
+          "agency": {
+            "$ref": "#/components/schemas/AgencyInfo"
+          }
+        }
+      },
+      "MedicareStatus": {
+        "enum": [
+          "OnMedicare",
+          "TurningSixtyFive",
+          "NotSure",
+          null
+        ]
+      },
+      "NewNote": {
+        "required": [
+          "body"
+        ],
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string"
+          }
+        }
+      },
+      "NoteView": {
+        "required": [
+          "id",
+          "body",
+          "author",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "body": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PatientIntakeView": {
+        "required": [
+          "broker",
+          "form",
+          "submittedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "broker": {
+            "$ref": "#/components/schemas/PublicBroker"
+          },
+          "form": {
+            "$ref": "#/components/schemas/IntakeForm"
+          },
+          "submittedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "PharmacyEntry": {
+        "required": [
+          "npi",
+          "name",
+          "address",
+          "zip"
+        ],
+        "type": "object",
+        "properties": {
+          "npi": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "zip": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PharmacySearchResult": {
+        "required": [
+          "npi",
+          "name",
+          "address1",
+          "address2",
+          "city",
+          "state",
+          "zip",
+          "phone",
+          "mailOrder",
+          "inNetwork",
+          "miles"
+        ],
+        "type": "object",
+        "properties": {
+          "npi": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "address1": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "address2": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "city": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "state": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "zip": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mailOrder": {
+            "type": "boolean"
+          },
+          "inNetwork": {
+            "type": "boolean"
+          },
+          "miles": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "PharmacyType": {
+        "enum": [
+          "PreferredRetail",
+          "StandardRetail",
+          "PreferredMail",
+          "StandardMail"
+        ]
+      },
+      "PublicBroker": {
+        "required": [
+          "slug",
+          "displayName",
+          "agencyName",
+          "phone",
+          "photoUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "agencyName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "photoUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PublicIntake": {
+        "required": [
+          "form",
+          "consentContact",
+          "consentShareHealthInfo"
+        ],
+        "type": "object",
+        "properties": {
+          "form": {
+            "$ref": "#/components/schemas/IntakeForm"
+          },
+          "consentContact": {
+            "type": "boolean"
+          },
+          "consentShareHealthInfo": {
+            "type": "boolean"
+          }
+        }
+      },
+      "QuoteDrugLine": {
+        "required": [
+          "rxcui",
+          "name",
+          "status",
+          "tier",
+          "fullCostPerFill",
+          "priceEstimated",
+          "fills",
+          "memberCost",
+          "priorAuth",
+          "stepTherapy",
+          "quantityLimit",
+          "exceedsQuantityLimit"
+        ],
+        "type": "object",
+        "properties": {
+          "rxcui": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CoverageStatus"
+          },
+          "tier": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "fullCostPerFill": {
+            "type": "number",
+            "format": "double"
+          },
+          "priceEstimated": {
+            "type": "boolean"
+          },
+          "fills": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "memberCost": {
+            "type": "number",
+            "format": "double"
+          },
+          "priorAuth": {
+            "type": "boolean"
+          },
+          "stepTherapy": {
+            "type": "boolean"
+          },
+          "quantityLimit": {
+            "type": "boolean"
+          },
+          "exceedsQuantityLimit": {
+            "type": "boolean"
+          }
+        }
+      },
+      "QuoteOptions": {
+        "required": [
+          "planYear",
+          "startMonth"
+        ],
+        "type": "object",
+        "properties": {
+          "planYear": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "startMonth": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "QuotePharmacyStatus": {
+        "required": [
+          "npi",
+          "name",
+          "inNetwork",
+          "preferred"
+        ],
+        "type": "object",
+        "properties": {
+          "npi": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "inNetwork": {
+            "type": "boolean"
+          },
+          "preferred": {
+            "type": "boolean"
+          }
+        }
+      },
+      "QuotePlan": {
+        "required": [
+          "key",
+          "name",
+          "organization",
+          "parentOrganization",
+          "appointed",
+          "benefitType",
+          "starRating",
+          "deductible",
+          "monthlyPremium",
+          "annualPremium",
+          "drugCost",
+          "estimatedAnnualCost",
+          "allDrugsCovered",
+          "pharmacyInNetwork",
+          "pricedAt",
+          "pricedAtNpi",
+          "deductibleMetMonth",
+          "catastrophicMonth",
+          "byMonth",
+          "drugs",
+          "pharmacies",
+          "notes"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "organization": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "parentOrganization": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "appointed": {
+            "type": "boolean"
+          },
+          "benefitType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "starRating": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "deductible": {
+            "type": "number",
+            "format": "double"
+          },
+          "monthlyPremium": {
+            "type": "number",
+            "format": "double"
+          },
+          "annualPremium": {
+            "type": "number",
+            "format": "double"
+          },
+          "drugCost": {
+            "type": "number",
+            "format": "double"
+          },
+          "estimatedAnnualCost": {
+            "type": "number",
+            "format": "double"
+          },
+          "allDrugsCovered": {
+            "type": "boolean"
+          },
+          "pharmacyInNetwork": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "pricedAt": {
+            "$ref": "#/components/schemas/PharmacyType"
+          },
+          "pricedAtNpi": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "deductibleMetMonth": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "catastrophicMonth": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "byMonth": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "drugs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuoteDrugLine"
+            }
+          },
+          "pharmacies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuotePharmacyStatus"
+            }
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "QuoteResult": {
+        "required": [
+          "planYear",
+          "startMonth",
+          "countyCode",
+          "countyName",
+          "dataRelease",
+          "calculatedAt",
+          "plans",
+          "warnings"
+        ],
+        "type": "object",
+        "properties": {
+          "planYear": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "startMonth": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "countyCode": {
+            "type": "string"
+          },
+          "countyName": {
+            "type": "string"
+          },
+          "dataRelease": {
+            "type": "string"
+          },
+          "calculatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "plans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuotePlan"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "RedeemRequest": {
+        "required": [
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "SnapshotCreated": {
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SnapshotView": {
+        "required": [
+          "id",
+          "createdAt",
+          "clientName",
+          "brokerName",
+          "agencyName",
+          "brokerPhone",
+          "disclaimer",
+          "quote"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "clientName": {
+            "type": "string"
+          },
+          "brokerName": {
+            "type": "string"
+          },
+          "agencyName": {
+            "type": "string"
+          },
+          "brokerPhone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "disclaimer": {
+            "$ref": "#/components/schemas/Disclaimer"
+          },
+          "quote": {
+            "$ref": "#/components/schemas/QuoteResult"
+          }
+        }
+      },
+      "StatusChange": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ClientStatus"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Auth"
+    },
+    {
+      "name": "Reference"
+    },
+    {
+      "name": "Intake"
+    },
+    {
+      "name": "Patient"
+    },
+    {
+      "name": "Clients"
+    },
+    {
+      "name": "Settings"
+    }
+  ]
+}

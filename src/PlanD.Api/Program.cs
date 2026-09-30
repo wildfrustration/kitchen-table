@@ -13,7 +13,7 @@ var services = builder.Services;
 
 // --- data -------------------------------------------------------------------------------------
 services.AddSingleton(_ => Db.CreateDataSource());
-services.AddDbContext<AppDbContext>(o => o.UseNpgsql(Db.ConnectionString,
+services.AddDbContext<AppDbContext>(o => o.UseSnakeCaseNamingConvention().UseNpgsql(Db.ConnectionString,
     npgsql => npgsql.MigrationsHistoryTable("__ef_migrations", AppDbContext.Schema)));
 services.AddSingleton<QuoteRepository>();
 services.AddSingleton<IQuoteData>(sp => sp.GetRequiredService<QuoteRepository>());
@@ -50,7 +50,11 @@ services.AddAuthorizationBuilder()
     .AddPolicy(Policies.Patient, p => p.AddAuthenticationSchemes(PatientAuth.Scheme).RequireAuthenticatedUser());
 
 // --- API --------------------------------------------------------------------------------------
-services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+services.ConfigureHttpJsonOptions(o =>
+{
+    o.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    o.SerializerOptions.NumberHandling = JsonNumberHandling.Strict; // numbers are numbers in the OpenAPI types too
+});
 services.AddOpenApi();
 services.AddProblemDetails();
 
@@ -82,6 +86,7 @@ api.MapAuthEndpoints();
 api.MapReferenceEndpoints();
 api.MapIntakeEndpoints();
 api.MapClientEndpoints();
+app.MapFallback("/api/{**path}", () => Results.NotFound()); // unknown API routes are 404s, not the SPA
 app.MapFallbackToFile("index.html");
 
 app.Run();

@@ -87,6 +87,7 @@ public static class DemoSeed
         var db = sp.GetRequiredService<AppDbContext>();
         var users = sp.GetRequiredService<UserManager<BrokerUser>>();
         var rxcuis = await ResolveDrugs(sp.GetRequiredService<NpgsqlDataSource>());
+        var pharmacies = await NearbyPharmacies(sp.GetRequiredService<PlanD.Data.QuoteRepository>());
 
         await db.Database.MigrateAsync();
         await db.Database.ExecuteSqlRawAsync("""
@@ -137,6 +138,9 @@ public static class DemoSeed
                     Rxcui = rxcuis[d.Name], Name = d.Name, UnitsPerDose = d.UnitsPerDose, DosesPerDay = d.DosesPerDay,
                     DaysSupply = d.Days, SortOrder = n,
                 }).ToList(),
+                Pharmacies = pharmacies.TryGetValue(c.Zip, out var ph)
+                    ? [new ClientPharmacy { Npi = ph.Npi, Name = ph.Name, Address = ph.Address, Zip = ph.Zip }]
+                    : [],
                 Consents =
                 [
                     new Consent { Kind = ConsentKind.Contact, TextVersion = "demo-1", GrantedAt = submitted },
@@ -149,6 +153,29 @@ public static class DemoSeed
         Console.WriteLine($"Demo data loaded: {brokers.Count} brokers, {Clients.Length} clients. Password for every broker: {Password}");
         foreach (var (_, b) in brokers) Console.WriteLine($"  {b.Email}  ({b.DisplayName}, {b.Role}, /start/{b.PublicSlug})");
     }
+
+    /// <summary>The nearest in-network Walgreens or CVS to each seed ZIP, so demo quotes show pharmacy status.</summary>
+    private static async Task<Dictionary<string, (string Npi, string Name, string? Address, string? Zip)>> NearbyPharmacies(PlanD.Data.QuoteRepository repo)
+    {
+        var found = new Dictionary<string, (string, string, string?, string?)>();
+        foreach (var zip in Clients.Select(c => c.Zip).Distinct())
+        foreach (var chain in new[] { "walgreens", "cvs" })
+        {
+            var hit = (await repo.SearchPharmaciesAsync(zip, chain, 10))
+                .FirstOrDefault(p => p.InNetwork && !p.MailOrder && !p.Name.Contains("SPECIALTY", StringComparison.OrdinalIgnoreCase));
+            if (hit is null) continue;
+            var name = Title(hit.Name).Replace("Cvs", "CVS");
+            var address = string.Join(", ", new[] { hit.Address1, hit.City }.Where(s => s is not null).Select(s => Title(s!)));
+            found[zip] = (hit.Npi, name, address, hit.Zip);
+            break;
+        }
+        return found;
+    }
+
+    /// <summary>"4451 W 12TH AVE" → "4451 W 12th Ave": capitalize words that start with a letter.</summary>
+    private static string Title(string s) => string.Join(' ', s.ToLowerInvariant().Split(' ')
+        .Select(w => w is "n" or "s" or "e" or "w" or "ne" or "nw" or "se" or "sw" or "us" or "po" ? w.ToUpperInvariant()
+            : w.Length > 0 && char.IsLetter(w[0]) ? char.ToUpperInvariant(w[0]) + w[1..] : w));
 
     /// <summary>Seed drugs by their exact RxNorm name so a new RxNorm release can't silently change them.</summary>
     private static async Task<Dictionary<string, string>> ResolveDrugs(NpgsqlDataSource cms)
