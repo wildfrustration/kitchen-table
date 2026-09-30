@@ -1,0 +1,18 @@
+{
+  // Captured by the research agent from Plan Finder's cost endpoint on 2026-09-29.
+  "name": "Atorvastatin 20 mg, 30 a month, mail order, no Extra Help",
+  "year": 2026,
+  "zip": "27215",
+  "county": "34000",
+  "pharmacy": "mail",
+  "extraHelp": "none",
+  "drugs": [
+    { "rxcui": "617310", "quantity": 30, "days": 30, "label": "atorvastatin 20 MG Oral Tablet" }
+  ],
+  "expected": [
+    // Plan Finder: four 90-day fills at $3.63, all inside the $615 deductible.
+    { "plan": "S5884-133-000", "drugCostYear": 14.52, "knownGap": "mail-order unit price: public file only has the retail average" }
+  ],
+  "source": "Plan Finder drugs/cost, plan S5884-133, NDC 00093505998",
+  "capturedOn": "2026-09-29"
+}

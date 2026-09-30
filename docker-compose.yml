@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:17
+    container_name: pland-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pland
+      POSTGRES_USER: pland
+      POSTGRES_PASSWORD: pland
+    ports:
+      - "5442:5432"
+    volumes:
+      - pland-pg:/var/lib/postgresql/data
+    # Tuned for bulk COPY loads of the CMS files on a dev machine.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=1GB
+      - -c
+      - maintenance_work_mem=1GB
+      - -c
+      - work_mem=64MB
+      - -c
+      - max_wal_size=2GB
+      - -c
+      - checkpoint_timeout=30min
+      - -c
+      - synchronous_commit=off
+    shm_size: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pland -d pland"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  pland-pg:

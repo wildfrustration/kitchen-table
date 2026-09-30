@@ -1,0 +1,10 @@
+bin/
+obj/
+*.user
+.vs/
+.idea/
+.DS_Store
+TestResults/
+# CMS downloads and extracted files (tens of GB) — fetched by the ingest CLI
+data/raw/
+data/work/
