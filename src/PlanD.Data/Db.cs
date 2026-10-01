@@ -7,7 +7,7 @@ namespace PlanD.Data;
 public static class Db
 {
     public const string DefaultConnectionString =
-        "Host=localhost;Port=5442;Database=pland;Username=pland;Password=pland;Command Timeout=0;Include Error Detail=true";
+        "Host=localhost;Port=5442;Database=pland;Username=pland;Password=pland;Command Timeout=0;Include Error Detail=true;Gss Encryption Mode=Disable";
 
     public static string ConnectionString =>
         Environment.GetEnvironmentVariable("PLAND_DB") is { Length: > 0 } cs ? cs : DefaultConnectionString;

@@ -73,6 +73,11 @@ if (args is ["demo-reset", ..])
     await DemoSeed.ResetAsync(app.Services);
     return;
 }
+if (args is ["demo-seed", ..])
+{
+    await DemoSeed.SeedIfEmptyAsync(app.Services);
+    return;
+}
 
 app.UseExceptionHandler();
 app.UseDefaultFiles();

@@ -1,0 +1,12 @@
+<Project>
+  <!--
+    In the dev containers the source is mounted from the host, so container builds keep their bin/obj
+    outside the source tree; otherwise macOS and Linux builds would overwrite each other's output.
+  -->
+  <PropertyGroup Condition="'$(KT_CONTAINER_BUILD)' == 'true'">
+    <BaseIntermediateOutputPath>/build/obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>/build/bin/$(MSBuildProjectName)/</BaseOutputPath>
+    <!-- The host's own bin/obj are still in the mounted tree; don't compile its generated files. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

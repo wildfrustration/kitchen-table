@@ -10,7 +10,9 @@ export default defineConfig({
   resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
   server: {
     port: 5173,
-    proxy: { "/api": "http://localhost:5080" },
+    // In the dev containers the API is another service; on the host it's localhost.
+    proxy: { "/api": process.env.VITE_API_PROXY ?? "http://localhost:5080" },
+    watch: process.env.VITE_POLL ? { usePolling: true, interval: 300 } : undefined,
   },
   build: {
     outDir: "../src/PlanD.Api/wwwroot",

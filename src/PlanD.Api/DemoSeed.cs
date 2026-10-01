@@ -80,6 +80,26 @@ public static class DemoSeed
             [Gabapentin, Sertraline, Tamsulosin]),
     ];
 
+    /// <summary><c>demo-seed</c>: loads the demo data only when there are no agencies yet (a fresh database).</summary>
+    public static async Task SeedIfEmptyAsync(IServiceProvider root)
+    {
+        await using (var scope = root.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            if (await db.Agencies.AnyAsync())
+            {
+                Console.WriteLine("App data exists; demo seed skipped.");
+                return;
+            }
+            if (!await db.Database.SqlQueryRaw<int>("select count(*)::int as \"Value\" from cms.release where source = 'rxnorm' and status = 'active'").AnyAsync(n => n > 0))
+            {
+                Console.WriteLine("No CMS data loaded yet; demo seed skipped (restore data/dumps/cms.dump first).");
+                return;
+            }
+        }
+        await ResetAsync(root);
+    }
+
     public static async Task ResetAsync(IServiceProvider root)
     {
         await using var scope = root.CreateAsyncScope();

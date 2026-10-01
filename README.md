@@ -17,7 +17,24 @@ Data research: [`docs/research/`](docs/research/).
 | `tests/PlanD.Engine.Tests` | Simulator and quote-service tests with hand-computed expectations |
 | `data/raw/` | Downloaded source files (git-ignored, ~30 GB) |
 
-## Running it
+## Running it with Docker (no .NET or Node needed)
+
+```sh
+docker compose up --build               # → http://localhost:5080 (brokers: /login, patients: /start/maria-alvarez)
+docker compose --profile dev up         # live reload: Vite on http://localhost:5173, API on :5080, source mounted
+```
+
+- First start restores the CMS reference data (plans, drugs, pharmacies) from `data/dumps/cms.dump`, migrates,
+  and loads the demo agencies/brokers/clients if the app is empty. Demo login: `maria@sunshine.example.com` /
+  `kitchen-table-demo`.
+- `data/dumps/cms.dump` (~40 MB) isn't in git. Make it from a loaded database with `scripts/export-cms.sh`, or copy
+  it from a machine that has one. Without it the app starts but has no plans to quote.
+- Reset the demo: `docker compose exec app kt demo-reset` (or `docker compose exec api-dev dotnet run --project src/PlanD.Api -- demo-reset`).
+- Data CLI inside the image: `docker compose run --rm app cli releases`, `… cli quote --zip 33135 --year 2026 --drug 617310:30`.
+- Emails go to the container log (`docker compose logs -f app`).
+- Don't run `app` and the dev profile at the same time: both use port 5080.
+
+## Running it on the host
 
 ```sh
 docker compose up -d                       # Postgres 17 on localhost:5442

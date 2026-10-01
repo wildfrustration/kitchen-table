@@ -1,7 +1,16 @@
+# Kitchen Table, local.
+#
+#   docker compose up --build          the whole app at http://localhost:5080 (demo data on first start)
+#   docker compose --profile dev up    live-reload development: API on :5080, Vite on http://localhost:5173
+#
+# CMS reference data (plans, drugs, pharmacies) comes from data/dumps/cms.dump — see README.
+
+x-db-env: &db-env
+  PLAND_DB: Host=db;Port=5432;Database=pland;Username=pland;Password=pland;Command Timeout=0;Include Error Detail=true;Gss Encryption Mode=Disable
+
 services:
   db:
     image: postgres:17
-    container_name: pland-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: pland
@@ -33,5 +42,77 @@ services:
       timeout: 3s
       retries: 30
 
+  # One-shot: restore the CMS reference data into an empty database.
+  cms-restore:
+    image: postgres:17
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      PGHOST: db
+      PGUSER: pland
+      PGPASSWORD: pland
+      PGDATABASE: pland
+    volumes:
+      - ./data/dumps:/dumps:ro
+      - ./docker/restore-cms.sh:/restore-cms.sh:ro
+    entrypoint: ["bash", "/restore-cms.sh"]
+    restart: "no"
+
+  # The built app: web + API in one container, like the server.
+  app:
+    build: .
+    image: kitchen-table:local
+    depends_on:
+      cms-restore: { condition: service_completed_successfully }
+    environment:
+      <<: *db-env
+      KT_SEED_DEMO: "true"
+      Email__Provider: log
+      Email__BaseUrl: http://localhost:5080
+    ports:
+      - "5080:8080"
+
+  # --- dev profile: live reload with the source mounted -------------------------------------
+  api-dev:
+    profiles: [dev]
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    depends_on:
+      cms-restore: { condition: service_completed_successfully }
+    working_dir: /src
+    environment:
+      <<: *db-env
+      KT_CONTAINER_BUILD: "true"
+      DOTNET_USE_POLLING_FILE_WATCHER: "1"
+      ASPNETCORE_ENVIRONMENT: Development
+      Email__Provider: log
+      Email__BaseUrl: http://localhost:5173
+    command: >
+      sh -c "dotnet run --project src/PlanD.Api -- migrate && dotnet run --project src/PlanD.Api -- demo-seed &&
+             dotnet watch --project src/PlanD.Api run --no-launch-profile --urls http://0.0.0.0:5080"
+    volumes:
+      - .:/src
+      - nuget:/root/.nuget/packages
+      - dotnet-build:/build
+    ports:
+      - "5080:5080"
+
+  web-dev:
+    profiles: [dev]
+    image: node:22-bookworm-slim
+    depends_on: [api-dev]
+    working_dir: /src/web
+    environment:
+      VITE_API_PROXY: http://api-dev:5080
+      VITE_POLL: "1"
+    command: sh -c "npm ci && npx vite --host 0.0.0.0"
+    volumes:
+      - .:/src
+      - web-node-modules:/src/web/node_modules
+    ports:
+      - "5173:5173"
+
 volumes:
   pland-pg:
+  nuget:
+  dotnet-build:
+  web-node-modules:

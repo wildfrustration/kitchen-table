@@ -36,3 +36,10 @@ jobs:
           npm run gen:api
           git diff --exit-code src/api
           npm run build
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the app image
+        run: docker build -t kitchen-table:ci .

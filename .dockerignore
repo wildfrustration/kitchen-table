@@ -1,0 +1,12 @@
+# Keep the build context small: the CMS downloads alone are ~30 GB.
+data/
+**/bin/
+**/obj/
+**/node_modules/
+web/dist/
+src/PlanD.Api/wwwroot/
+.git/
+.github/
+.idea/
+.vs/
+**/*.user
