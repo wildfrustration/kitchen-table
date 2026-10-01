@@ -17,7 +17,7 @@ public sealed partial class SpufLoader(NpgsqlDataSource db, Action<string> log)
     private HashSet<string> _formularies = [];
 
     /// <summary>Stand-alone PDP contract ids start with S (H = local MA, R = regional MA).</summary>
-    internal static bool IsPdp(ReadOnlySpan<char> contractId) => contractId.StartsWith("S");
+    public static bool IsPdp(ReadOnlySpan<char> contractId) => contractId.StartsWith("S");
 
     public async Task<int> LoadAsync(string directory, int planYear, string label, CancellationToken ct = default)
     {

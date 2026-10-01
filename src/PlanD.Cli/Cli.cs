@@ -29,6 +29,7 @@ public static class Cli
 
         Validation
           validate [dir] [--tolerance <usd>]         Compare quotes with captured Plan Finder figures (validation/personas)
+          drift --old <spuf dir> --new <spuf dir>    How far off quotes are with last year's drug prices (AEP stand-in)
 
         Environment: PLAND_DB overrides the connection string (default: localhost:5442).
         """;
@@ -114,6 +115,9 @@ public static class Cli
 
                 case "validate":
                     return await ValidateCommand.RunAsync(db, a);
+
+                case "drift":
+                    return await DriftCommand.RunAsync(db, a);
 
                 default:
                     Console.Error.WriteLine($"Unknown command '{string.Join(' ', args)}'.\n\n{Usage}");
