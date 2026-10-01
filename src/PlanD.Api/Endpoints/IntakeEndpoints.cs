@@ -48,7 +48,7 @@ public static class IntakeEndpoints
             client.Apply(body.Form, db);
             client.ExtraHelpLevel = ClientMapping.SuggestedExtraHelpLevel(body.Form.ExtraHelp);
             client.SubmittedAt = DateTimeOffset.UtcNow;
-            AddConsents(client, http);
+            AddConsents(db, client, http);
             db.Clients.Add(client);
             var token = NewLink(db, client, LinkPurpose.Return);
             await db.SaveChangesAsync(ct);
@@ -114,7 +114,7 @@ public static class IntakeEndpoints
             client.Apply(body.Form, db);
             if (client.ExtraHelpLevel == 0) client.ExtraHelpLevel = ClientMapping.SuggestedExtraHelpLevel(body.Form.ExtraHelp);
             client.SubmittedAt = DateTimeOffset.UtcNow;
-            AddConsents(client, http);
+            AddConsents(db, client, http);
             await db.SaveChangesAsync(ct);
             await notify.BrokerNewIntakeAsync(client, client.Broker, updated: !first, ct);
             return TypedResults.NoContent();
@@ -158,12 +158,12 @@ public static class IntakeEndpoints
         return errors;
     }
 
-    private static void AddConsents(Client client, HttpContext http)
+    private static void AddConsents(AppDbContext db, Client client, HttpContext http)
     {
         var ip = http.Connection.RemoteIpAddress?.ToString();
         var agent = http.Request.Headers.UserAgent.ToString();
         foreach (var kind in new[] { ConsentKind.Contact, ConsentKind.ShareHealthInfo })
-            client.Consents.Add(new Consent { Kind = kind, TextVersion = ConsentWording.Version, IpAddress = ip, UserAgent = agent });
+            db.Consents.Add(new Consent { ClientId = client.Id, Kind = kind, TextVersion = ConsentWording.Version, IpAddress = ip, UserAgent = agent });
     }
 
     private static Task SignInPatient(HttpContext http, Guid clientId) =>

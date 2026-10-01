@@ -35,17 +35,22 @@ public static class ClientMapping
         c.UsesMailOrder = f.UsesMailOrder;
         c.UpdatedAt = DateTimeOffset.UtcNow;
 
+        // Replace the lists. The new rows must be added explicitly: their ids are set in code, so EF would
+        // otherwise take them for existing rows found through the navigation and try to UPDATE them.
         db.ClientDrugs.RemoveRange(c.Drugs);
         c.Drugs = f.Drugs.Select((d, i) => new ClientDrug
         {
             ClientId = c.Id, Rxcui = d.Rxcui, Name = d.Name, UnitsPerDose = d.UnitsPerDose,
             DosesPerDay = d.DosesPerDay, DaysSupply = d.DaysSupply, SortOrder = i,
         }).ToList();
+        db.ClientDrugs.AddRange(c.Drugs);
+
         db.ClientPharmacies.RemoveRange(c.Pharmacies);
         c.Pharmacies = f.Pharmacies.Select((p, i) => new ClientPharmacy
         {
             ClientId = c.Id, Npi = p.Npi, Name = p.Name, Address = p.Address, Zip = p.Zip, SortOrder = i,
         }).ToList();
+        db.ClientPharmacies.AddRange(c.Pharmacies);
     }
 
     /// <summary>A starting Extra Help category from the patient's answer; the broker confirms it.</summary>

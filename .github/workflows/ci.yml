@@ -7,6 +7,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # The API integration tests run against a real Postgres (they create a pland_test database).
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: pland
+          POSTGRES_PASSWORD: pland
+          POSTGRES_DB: pland
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U pland"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      PLAND_DB: Host=localhost;Port=5432;Database=pland;Username=pland;Password=pland;Gss Encryption Mode=Disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
