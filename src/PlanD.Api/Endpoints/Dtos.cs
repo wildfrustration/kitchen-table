@@ -118,7 +118,8 @@ public sealed record CarrierSelection(IReadOnlyList<string> ParentOrganizations)
 
 public sealed record QuoteDrugLine(
     string Rxcui, string Name, CoverageStatus Status, int? Tier, decimal FullCostPerFill, bool PriceEstimated,
-    int Fills, decimal MemberCost, bool PriorAuth, bool StepTherapy, bool QuantityLimit, bool ExceedsQuantityLimit);
+    int Fills, decimal MemberCost, bool PriorAuth, bool StepTherapy, bool QuantityLimit, bool ExceedsQuantityLimit,
+    bool PriceUnavailable);
 
 public sealed record QuotePharmacyStatus(string Npi, string Name, bool InNetwork, bool Preferred);
 

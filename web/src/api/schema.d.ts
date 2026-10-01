@@ -1357,6 +1357,7 @@ export interface components {
             stepTherapy: boolean;
             quantityLimit: boolean;
             exceedsQuantityLimit: boolean;
+            priceUnavailable: boolean;
         };
         QuoteOptions: {
             /** Format: int32 */

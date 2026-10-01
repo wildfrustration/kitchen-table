@@ -192,7 +192,7 @@ export function SnapshotPage() {
                   {d.status !== "Covered" && <span className="text-red-700"> — not covered</span>}
                   {(d.priorAuth || d.stepTherapy) && <span className="text-neutral-500"> — needs {d.priorAuth ? "prior authorization" : "step therapy"}</span>}
                 </span>
-                <span>{money(d.memberCost)}</span>
+                <span>{d.priceUnavailable ? "cash price" : money(d.memberCost)}</span>
               </li>
             ))}
           </ul>
@@ -203,6 +203,14 @@ export function SnapshotPage() {
           )}
         </section>
       ))}
+
+      {q.warnings.length > 0 && (
+        <div className="mt-6 grid gap-1 rounded border border-amber-300 bg-amber-50 p-3 text-xs">
+          {q.warnings.map((w) => (
+            <p key={w}>{w}</p>
+          ))}
+        </div>
+      )}
 
       <footer className="mt-8 grid gap-2 border-t pt-4 text-xs text-neutral-500">
         <p>

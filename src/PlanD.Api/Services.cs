@@ -99,6 +99,15 @@ public sealed class ClientQuotes(QuoteService quotes, QuoteRepository repo, Npgs
         if (request.Drugs.Count == 0) warnings.Add("No drugs entered: totals are premiums only.");
 
         var quote = await quotes.QuoteAsync(request, ct);
+
+        // A drug no plan covers usually has no CMS price at all: say so once, not just per plan.
+        var unpriced = quote.Plans.SelectMany(p => p.Drugs.Drugs)
+            .GroupBy(d => d.Rxcui)
+            .Where(g => g.All(d => d.PriceUnavailable && d.Status == CoverageStatus.NotOnFormulary))
+            .Select(g => DrugNames.Short(g.First().Name))
+            .ToList();
+        foreach (var name in unpriced)
+            warnings.Add($"No plan here covers {name}, and CMS publishes no price for it, so the totals leave it out. The client would pay the pharmacy's cash price.");
         var names = client.Pharmacies.ToDictionary(p => p.Npi, p => p.Name);
         var release = await ReleaseLabelAsync(year, ct);
 
@@ -113,7 +122,7 @@ public sealed class ClientQuotes(QuoteService quotes, QuoteRepository repo, Npgs
         q.MonthlyPremium, q.AnnualPremium, q.Drugs.Total, q.EstimatedAnnualCost, q.AllDrugsCovered, q.PharmacyInNetwork,
         q.Drugs.Pharmacy, q.PricedAtNpi, q.Drugs.DeductibleMetMonth, q.Drugs.CatastrophicMonth, q.Drugs.ByMonth,
         q.Drugs.Drugs.Select(d => new QuoteDrugLine(d.Rxcui, d.Name, d.Status, d.Tier, d.FullCostPerFill, d.PriceEstimated, d.Fills,
-            d.MemberCost, d.PriorAuth, d.StepTherapy, d.QuantityLimit, d.ExceedsQuantityLimit)).ToList(),
+            d.MemberCost, d.PriorAuth, d.StepTherapy, d.QuantityLimit, d.ExceedsQuantityLimit, d.PriceUnavailable)).ToList(),
         q.Pharmacies.Select(p => new QuotePharmacyStatus(p.Npi, pharmacyNames.GetValueOrDefault(p.Npi, p.Npi), p.InNetwork, p.Preferred)).ToList(),
         q.Notes);
 

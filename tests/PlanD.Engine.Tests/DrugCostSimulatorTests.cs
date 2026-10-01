@@ -103,6 +103,18 @@ public class DrugCostSimulatorTests
     }
 
     [Fact]
+    public void A_drug_with_no_price_anywhere_is_flagged_not_counted_as_free()
+    {
+        var plan = Plan(615m, DrugBenefitType.DefinedStandard, Tier(3, Coins(0.25m), deductible: true));
+        var rx = new Prescription("1", "Drug", Quantity: 30m, DaysSupply: 30, DrugKind.Brand);
+        var result = Run(plan, (rx, PlanDrug.NotCovered("1", marketUnitCost: null)));
+
+        Assert.True(result.Drugs[0].PriceUnavailable);
+        Assert.Equal(CoverageStatus.NotOnFormulary, result.Drugs[0].Status);
+        Assert.Equal(0m, result.Total); // can't be estimated, so it's left out — and flagged
+    }
+
+    [Fact]
     public void A_90_day_supply_the_tier_does_not_offer_costs_full_price()
     {
         // Specialty tier covered for 30-day fills only.

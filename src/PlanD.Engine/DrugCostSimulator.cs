@@ -28,7 +28,12 @@ public sealed record DrugCostLine(
     bool PriorAuth,
     bool StepTherapy,
     bool QuantityLimit,
-    bool ExceedsQuantityLimit);
+    bool ExceedsQuantityLimit,
+    bool PriceUnavailable)
+{
+    // PriceUnavailable: CMS publishes no unit cost for this drug (typically one no plan covers), so its cost
+    // can't be estimated and isn't in the total.
+}
 
 public sealed record DrugCostEstimate(
     PharmacyType Pharmacy,
@@ -233,6 +238,7 @@ public static class DrugCostSimulator
         public required CoverageStatus Status { get; init; }
         public required decimal FullCost { get; init; }
         public required bool PriceEstimated { get; init; }
+        public required bool PriceUnavailable { get; init; }
         public int Fills { get; set; }
         public decimal MemberCost { get; set; }
 
@@ -263,6 +269,7 @@ public static class DrugCostSimulator
                 Status = status,
                 FullCost = fullCost,
                 PriceEstimated = estimated || unitCost is null,
+                PriceUnavailable = unitCost is null,
             };
         }
 
@@ -278,7 +285,7 @@ public static class DrugCostSimulator
 
         public DrugCostLine ToResult() => new(
             Rx.Rxcui, Rx.Name, Status, Drug.Tier, FullCost, PriceEstimated, Fills, MemberCost,
-            Drug.PriorAuth, Drug.StepTherapy, Drug.QuantityLimit, ExceedsQuantityLimit());
+            Drug.PriorAuth, Drug.StepTherapy, Drug.QuantityLimit, ExceedsQuantityLimit(), PriceUnavailable);
 
         /// <summary>A quantity limit only matters when the prescription is over it (limits are per N days).</summary>
         private bool ExceedsQuantityLimit() =>

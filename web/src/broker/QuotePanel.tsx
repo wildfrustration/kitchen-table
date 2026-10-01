@@ -241,7 +241,7 @@ function PlanDetail({ plan, startMonth }: { plan: Plan; startMonth: number }) {
                   <div className="grid">
                     <span>{drugTitle(d.name).title}</span>
                     <span className="text-xs text-muted-foreground">
-                      {[d.priorAuth && "prior authorization", d.stepTherapy && "step therapy", d.exceedsQuantityLimit && "over quantity limit", d.priceEstimated && "price estimated"]
+                      {[d.priorAuth && "prior authorization", d.stepTherapy && "step therapy", d.exceedsQuantityLimit && "over quantity limit", d.priceEstimated && !d.priceUnavailable && "price estimated", d.priceUnavailable && "not in the total"]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>
@@ -251,9 +251,13 @@ function PlanDetail({ plan, startMonth }: { plan: Plan; startMonth: number }) {
                 <TableCell>
                   <Badge variant={d.status === "Covered" ? "outline" : "destructive"}>{STATUS_LABEL[d.status]}</Badge>
                 </TableCell>
-                <TableCell className="text-right tabular-nums">{money(d.fullCostPerFill)}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {d.priceUnavailable ? <span className="text-muted-foreground">No price data</span> : money(d.fullCostPerFill)}
+                </TableCell>
                 <TableCell className="text-right tabular-nums">{d.fills}</TableCell>
-                <TableCell className="text-right tabular-nums">{money(d.memberCost)}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {d.priceUnavailable ? <span className="text-muted-foreground">Cash price</span> : money(d.memberCost)}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

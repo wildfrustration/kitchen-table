@@ -1775,7 +1775,8 @@
           "priorAuth",
           "stepTherapy",
           "quantityLimit",
-          "exceedsQuantityLimit"
+          "exceedsQuantityLimit",
+          "priceUnavailable"
         ],
         "type": "object",
         "properties": {
@@ -1820,6 +1821,9 @@
             "type": "boolean"
           },
           "exceedsQuantityLimit": {
+            "type": "boolean"
+          },
+          "priceUnavailable": {
             "type": "boolean"
           }
         }

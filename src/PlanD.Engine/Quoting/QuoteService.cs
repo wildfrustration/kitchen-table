@@ -127,10 +127,14 @@ public sealed class QuoteService(IQuoteData data)
 
     private static List<string> Explain(PlanOffer plan, DrugCostEstimate estimate, string? pricedAtNpi, List<string> notes)
     {
-        foreach (var d in estimate.Drugs)
+        foreach (var line in estimate.Drugs)
         {
+            var d = line with { Name = DrugNames.Short(line.Name) };
             switch (d.Status)
             {
+                case CoverageStatus.NotOnFormulary when d.PriceUnavailable:
+                    notes.Add($"{d.Name}: not covered, and CMS publishes no price for it — left out of the total (the client pays the pharmacy's cash price)");
+                    break;
                 case CoverageStatus.NotOnFormulary:
                     notes.Add($"{d.Name}: not covered — full price, doesn't count toward the cap");
                     break;
@@ -147,7 +151,8 @@ public sealed class QuoteService(IQuoteData data)
             if (d.StepTherapy) hurdles.Add("step therapy");
             if (d.ExceedsQuantityLimit) hurdles.Add("over the plan's quantity limit");
             if (hurdles.Count > 0) notes.Add($"{d.Name}: {string.Join(", ", hurdles)}");
-            if (d.PriceEstimated && d.Status is CoverageStatus.Covered) notes.Add($"{d.Name}: price estimated");
+            if (d.PriceUnavailable && d.Status is not CoverageStatus.NotOnFormulary) notes.Add($"{d.Name}: no price data — left out of the total");
+            else if (d.PriceEstimated && d.Status is CoverageStatus.Covered) notes.Add($"{d.Name}: price estimated");
         }
 
         var where = pricedAtNpi is null ? "a" : "the client's";

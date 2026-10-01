@@ -75,3 +75,13 @@ public enum CoverageStatus
     /// <summary>On the formulary, but the plan doesn't cover this days supply at this pharmacy type.</summary>
     DaysSupplyNotCovered,
 }
+
+public static class DrugNames
+{
+    /// <summary>"… Extended Release Oral Tablet [Contrave]" → "Contrave"; names without a brand stay as they are.</summary>
+    public static string Short(string name)
+    {
+        var open = name.LastIndexOf('[');
+        return open >= 0 && name.EndsWith(']') ? name[(open + 1)..^1] : name;
+    }
+}
