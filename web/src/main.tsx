@@ -7,7 +7,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClientPage } from "./broker/ClientPage";
 import { NewClientPage, SettingsPage, SnapshotPage } from "./broker/OtherPages";
 import { QueuePage } from "./broker/QueuePage";
-import { BrokerShell, LoginPage } from "./broker/Shell";
+import { BrokersPage } from "./broker/BrokersPage";
+import { BrokerShell, JoinPage, LoginPage } from "./broker/Shell";
 import { DonePage, LinkPage, StartPage } from "./patient/PatientPages";
 import "./index.css";
 
@@ -23,6 +24,7 @@ const router = createBrowserRouter([
   { path: "/done", element: <DonePage /> },
   // Brokers
   { path: "/login", element: <LoginPage /> },
+  { path: "/join/:token", element: <JoinPage /> },
   { path: "/app/snapshots/:id", element: <SnapshotPage /> },
   {
     path: "/app",
@@ -31,6 +33,7 @@ const router = createBrowserRouter([
       { index: true, element: <QueuePage /> },
       { path: "clients/new", element: <NewClientPage /> },
       { path: "clients/:id", element: <ClientPage /> },
+      { path: "brokers", element: <BrokersPage /> },
       { path: "settings", element: <SettingsPage /> },
     ],
   },

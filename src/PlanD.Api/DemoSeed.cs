@@ -137,6 +137,15 @@ public static class DemoSeed
             }
         }
 
+        // One broker who hasn't set up their login yet, so the admin's Brokers page shows a pending invite.
+        var maria = brokers["maria-alvarez"];
+        db.BrokerInvites.Add(new BrokerInvite
+        {
+            AgencyId = maria.AgencyId, Email = "priya@sunshine.example.com", DisplayName = "Priya Shah", Role = BrokerRole.Broker,
+            InvitedById = maria.Id, TokenHash = Tokens.Hash(Tokens.New()), CreatedAt = DateTimeOffset.UtcNow.AddDays(-2),
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(-2) + BrokerInvite.Lifetime,
+        });
+
         var now = DateTimeOffset.UtcNow;
         var i = 0;
         foreach (var c in Clients)

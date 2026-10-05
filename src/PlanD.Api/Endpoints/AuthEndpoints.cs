@@ -21,7 +21,7 @@ public static class AuthEndpoints
     {
         var auth = api.MapGroup("/auth").WithTags("Auth");
 
-        auth.MapPost("/login", async Task<Results<NoContent, UnauthorizedHttpResult>> (
+        auth.MapPost("/login", async Task<Results<NoContent, UnauthorizedHttpResult, ProblemHttpResult>> (
             LoginRequest body, UserManager<BrokerUser> users, SignInManager<BrokerUser> signIn) =>
         {
             var user = await users.FindByEmailAsync(body.Email.Trim());
@@ -29,6 +29,12 @@ public static class AuthEndpoints
 
             var check = await signIn.CheckPasswordSignInAsync(user, body.Password, lockoutOnFailure: true);
             if (!check.Succeeded) return TypedResults.Unauthorized();
+            // Only said after a correct password, so it can't be used to find out who has an account.
+            if (user.DeactivatedAt is not null)
+                return TypedResults.Problem("Your account was deactivated. Ask your agency admin if you need access again.", statusCode: StatusCodes.Status403Forbidden);
+
+            user.LastSignInAt = DateTimeOffset.UtcNow;
+            await users.UpdateAsync(user);
 
             await signIn.SignInAsync(user, new AuthenticationProperties
             {

@@ -114,6 +114,39 @@ public sealed record CarrierChoice(string ParentOrganization, int Plans, bool Ap
 
 public sealed record CarrierSelection(IReadOnlyList<string> ParentOrganizations);
 
+// --- agency admin ----------------------------------------------------------------------------------
+
+public sealed record BrokerSummary(
+    Guid Id,
+    string DisplayName,
+    string Email,
+    string? Phone,
+    BrokerRole Role,
+    string PublicSlug,
+    int Clients,
+    int ActiveClients,
+    int Carriers,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? LastSignInAt,
+    DateTimeOffset? DeactivatedAt,
+    bool IsYou);
+
+public sealed record PendingInvite(
+    Guid Id, string Email, string DisplayName, BrokerRole Role, string InvitedBy, DateTimeOffset CreatedAt, DateTimeOffset ExpiresAt);
+
+public sealed record NewBrokerInvite(string Email, string DisplayName, BrokerRole Role);
+
+public sealed record RoleChange(BrokerRole Role);
+
+/// <summary>Who takes over the broker's clients. Required when they have any.</summary>
+public sealed record Deactivation(Guid? MoveClientsTo);
+
+public sealed record JoinLookup(string Token);
+
+public sealed record JoinInvite(string AgencyName, string Email, string DisplayName, BrokerRole Role, string InvitedBy);
+
+public sealed record JoinRequest(string Token, string DisplayName, string? Phone, string Password);
+
 // --- quotes ----------------------------------------------------------------------------------------
 
 public sealed record QuoteDrugLine(

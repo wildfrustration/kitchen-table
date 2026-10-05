@@ -65,6 +65,8 @@ cd web && npm install && npm run dev                # http://localhost:5173, pro
 ```
 
 - Brokers: `/login` (demo: `maria@sunshine.example.com` / `kitchen-table-demo`), workspace under `/app`.
+- Agency admins (demo: Maria, Denise) manage their brokers under `/app/brokers`: invite, promote, deactivate. An invited
+  broker sets up their login at `/join/{token}`.
 - Patients: a broker's public link `/start/{slug}` (e.g. `/start/maria-alvarez`), invite/return links `/i/…`, `/r/…`.
 - Emails are written to the API log in development (`Email:Provider` = `log`); set `Email:Provider=resend`,
   `Email:ResendApiKey` and `Email:BaseUrl` for real delivery.

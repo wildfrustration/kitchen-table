@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { PhoneIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { api, unwrap, type S } from "@/api/client";
+import { Logo } from "@/components/Logo";
 import { phone } from "@/lib/format";
 
 /** Every patient page carries the broker (the organization of record) and the CMS disclaimer. */
@@ -33,7 +34,7 @@ export function PatientShell({ broker, zip, children }: { broker?: S["PublicBrok
               </div>
             </div>
           ) : (
-            <span className="font-semibold">Kitchen Table</span>
+            <Logo />
           )}
           {broker?.phone && (
             <a href={`tel:${broker.phone.replace(/\D/g, "")}`} className="flex items-center gap-2 text-sm font-medium text-primary">

@@ -31,6 +31,11 @@ public sealed class BrokerUser : IdentityUser<Guid>
     public required string PublicSlug { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? LastSignInAt { get; set; }
+
+    /// <summary>Set by an agency admin: the broker can't sign in and their public link stops working.</summary>
+    public DateTimeOffset? DeactivatedAt { get; set; }
+
     public List<BrokerCarrier> Carriers { get; set; } = [];
 }
 
@@ -201,14 +206,19 @@ public sealed class PatientLink
     public DateTimeOffset? UsedAt { get; set; }
 }
 
-/// <summary>An agency admin's invitation for a new broker to set up their login.</summary>
+/// <summary>An agency admin's invitation for a new broker to set up their login. Only the SHA-256 of the token is stored.</summary>
 public sealed class BrokerInvite
 {
+    public static readonly TimeSpan Lifetime = TimeSpan.FromDays(7);
+
     public Guid Id { get; set; } = Guid.CreateVersion7();
     public Guid AgencyId { get; set; }
     public required string Email { get; set; }
+    public required string DisplayName { get; set; }
     public BrokerRole Role { get; set; }
+    public Guid InvitedById { get; set; }
     public required string TokenHash { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset? AcceptedAt { get; set; }
 }

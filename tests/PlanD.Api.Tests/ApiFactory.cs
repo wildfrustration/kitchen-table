@@ -7,6 +7,9 @@ using Npgsql;
 using PlanD.Api.Data;
 using PlanD.Data;
 
+// Every test class empties and reseeds the same database, so they must not run at the same time.
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
 namespace PlanD.Api.Tests;
 
 /// <summary>

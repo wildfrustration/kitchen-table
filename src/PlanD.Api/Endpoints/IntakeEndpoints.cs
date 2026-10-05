@@ -27,7 +27,7 @@ public static class IntakeEndpoints
         intake.MapGet("/{slug}/disclaimer", async Task<Results<Ok<Disclaimer>, NotFound>> (
             string slug, string? zip, AppDbContext db, ClientQuotes quotes, CancellationToken ct) =>
         {
-            var broker = await db.Users.SingleOrDefaultAsync(u => u.PublicSlug == slug, ct);
+            var broker = await db.Users.SingleOrDefaultAsync(u => u.PublicSlug == slug && u.DeactivatedAt == null, ct);
             if (broker is null) return TypedResults.NotFound();
             return TypedResults.Ok(await quotes.DisclaimerAsync(await db.CarriersAsync(broker.Id, ct), zip, ct));
         });
@@ -36,7 +36,7 @@ public static class IntakeEndpoints
         intake.MapPost("/{slug}", async Task<Results<Created, NotFound, ValidationProblem>> (
             string slug, PublicIntake body, HttpContext http, AppDbContext db, Notifications notify, CancellationToken ct) =>
         {
-            var broker = await db.Users.SingleOrDefaultAsync(u => u.PublicSlug == slug, ct);
+            var broker = await db.Users.SingleOrDefaultAsync(u => u.PublicSlug == slug && u.DeactivatedAt == null, ct);
             if (broker is null) return TypedResults.NotFound();
             if (Validate(body) is { Count: > 0 } errors) return TypedResults.ValidationProblem(errors);
 
@@ -142,7 +142,7 @@ public static class IntakeEndpoints
     public static PublicBroker ToPublic(BrokerUser b) => new(b.PublicSlug, b.DisplayName, b.Agency.Name, b.PhoneNumber, b.PhotoUrl);
 
     private static async Task<PublicBroker?> PublicBrokerAsync(AppDbContext db, string slug, CancellationToken ct) =>
-        await db.Users.Where(u => u.PublicSlug == slug)
+        await db.Users.Where(u => u.PublicSlug == slug && u.DeactivatedAt == null)
             .Select(u => new PublicBroker(u.PublicSlug, u.DisplayName, u.Agency.Name, u.PhoneNumber, u.PhotoUrl))
             .SingleOrDefaultAsync(ct);
 

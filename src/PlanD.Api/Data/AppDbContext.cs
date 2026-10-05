@@ -29,6 +29,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             e.ToTable("brokers");
             e.HasIndex(x => x.PublicSlug).IsUnique();
             e.HasOne(x => x.Agency).WithMany(a => a.Brokers).HasForeignKey(x => x.AgencyId);
+            e.HasMany(x => x.Carriers).WithOne().HasForeignKey(x => x.BrokerId).OnDelete(DeleteBehavior.Cascade);
             e.Property(x => x.Role).HasConversion<string>();
         });
         b.Entity<Microsoft.AspNetCore.Identity.IdentityUserClaim<Guid>>().ToTable("broker_claims");
@@ -84,7 +85,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
         {
             e.ToTable("broker_invites");
             e.HasIndex(x => x.TokenHash).IsUnique();
+            e.HasIndex(x => new { x.AgencyId, x.Email });
             e.Property(x => x.Role).HasConversion<string>();
+            e.HasOne<Agency>().WithMany().HasForeignKey(x => x.AgencyId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<BrokerUser>().WithMany().HasForeignKey(x => x.InvitedById).OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<QuoteSnapshot>(e =>

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -31,7 +32,18 @@ services.AddSingleton<Notifications>();
 
 // --- auth: brokers sign in with Identity; patients get a separate, narrower cookie ---------------
 services.AddAuthentication(IdentityConstants.ApplicationScheme)
-    .AddCookie(IdentityConstants.ApplicationScheme, o => ConfigureApiCookie(o, "kt_broker", TimeSpan.FromHours(12), sliding: true))
+    .AddCookie(IdentityConstants.ApplicationScheme, o =>
+    {
+        ConfigureApiCookie(o, "kt_broker", TimeSpan.FromHours(12), sliding: true);
+        // Checked on every request, so a deactivated broker is signed out at once (deactivating also changes their stamp).
+        o.Events.OnValidatePrincipal = async ctx =>
+        {
+            var signIn = ctx.HttpContext.RequestServices.GetRequiredService<SignInManager<BrokerUser>>();
+            if (await signIn.ValidateSecurityStampAsync(ctx.Principal) is { DeactivatedAt: null }) return;
+            ctx.RejectPrincipal();
+            await ctx.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+        };
+    })
     .AddCookie(PatientAuth.Scheme, o => ConfigureApiCookie(o, "kt_patient", PatientAuth.SessionLength, sliding: false));
 services.AddIdentityCore<BrokerUser>(o =>
     {
@@ -91,6 +103,7 @@ api.MapAuthEndpoints();
 api.MapReferenceEndpoints();
 api.MapIntakeEndpoints();
 api.MapClientEndpoints();
+api.MapAgencyEndpoints();
 app.MapFallback("/api/{**path}", () => Results.NotFound()); // unknown API routes are 404s, not the SPA
 app.MapFallbackToFile("index.html");
 

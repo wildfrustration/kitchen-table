@@ -198,6 +198,23 @@ public sealed class Notifications(IEmailSender email, EmailOptions options, ILog
             """), ct);
     }
 
+    public async Task BrokerInviteAsync(BrokerInvite invite, BrokerUser invitedBy, string token, CancellationToken ct)
+    {
+        var role = invite.Role == BrokerRole.AgencyAdmin ? "an admin" : "a broker";
+        await Send(new EmailMessage(invite.Email, $"Join {invitedBy.Agency.Name} on Kitchen Table",
+            $"""
+            Hi {invite.DisplayName},
+
+            {invitedBy.DisplayName} added you as {role} at {invitedBy.Agency.Name} on Kitchen Table, where you'll compare Medicare drug plans for your clients.
+
+            Set up your login here:
+
+            {options.BaseUrl}/join/{token}
+
+            The link works once, for {BrokerInvite.Lifetime.Days} days.
+            """, invitedBy.Email), ct);
+    }
+
     private async Task Send(EmailMessage message, CancellationToken ct)
     {
         try

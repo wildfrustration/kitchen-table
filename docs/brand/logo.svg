@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 104">
+  <g transform="translate(52 47)">
+    <path fill="#0E7C86" d="M-39-30h37v22h-37a11 11 0 0 1 0-22z"/>
+    <path fill="#6BC4CB" d="M2-30h37a11 11 0 0 1 0 22H2z"/>
+    <rect fill="#0E7C86" x="-32" y="-6" width="11" height="46" rx="3"/>
+    <rect fill="#0E7C86" x="21" y="-6" width="11" height="46" rx="3"/>
+  </g>
+  <text x="112" y="68" fill="#1E293B" font-family="Geist, 'Geist Variable', Inter, system-ui, sans-serif" font-size="46" font-weight="600" letter-spacing="-1">Kitchen Table</text>
+</svg>
